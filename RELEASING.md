@@ -1,12 +1,12 @@
 # Releasing
 
-This repository produces the official `NUGET_PROJECT_NAME` package for nuget.org.
+This repository produces the official `Testinium.DevicePark` package for nuget.org.
 
 ## Package Identity
 
 | Field | Value |
 |---|---|
-| NuGet package | `NUGET_PROJECT_NAME` |
+| NuGet package | `Testinium.DevicePark` |
 | Assembly / root namespace | `Testinium.DevicePark` |
 | Feed | `https://api.nuget.org/v3/index.json` |
 | Target frameworks | `netstandard2.0`, `net472`, `net8.0` |
@@ -46,7 +46,7 @@ alongside the main package.
 
 ```bash
 dotnet new console -o /tmp/dp-check && cd /tmp/dp-check
-dotnet add package NUGET_PROJECT_NAME
+dotnet add package Testinium.DevicePark
 ```
 
 Then confirm that a clean consumer project compiles against `DeviceParkApiClient` and that the

@@ -47,7 +47,7 @@ later, where the OS default (TLS 1.2) applies.
 ## Installation
 
 ```bash
-dotnet add package NUGET_PROJECT_NAME
+dotnet add package Testinium.DevicePark
 ```
 
 ## Authentication
