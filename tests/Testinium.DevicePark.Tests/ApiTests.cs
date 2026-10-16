@@ -362,9 +362,34 @@ public sealed class ApiTests
     }
 
     [Fact]
+    public async Task ListApplicationsReadsArtifactMetadata()
+    {
+        var handler = StubHandler.Json(
+            "{\"size\":20,\"page\":0,\"totalPages\":1,\"totalElements\":1,\"data\":[{" +
+            "\"fileKey\":\"mobile-app.ipa\"," +
+            "\"bundleId\":\"com.example.app\"," +
+            "\"title\":\"Example App\"," +
+            "\"ipaVersion\":\"3.2.1\"," +
+            "\"enterprise\":true," +
+            "\"minimumOsVersion\":\"13.0\"}]}");
+        using var client = TestClient.Create(handler);
+
+        var applications = await client.Applications.ListAsync();
+        var application = applications.Data[0];
+
+        Assert.Equal("com.example.app", application.BundleId);
+        Assert.Equal("Example App", application.Title);
+        Assert.Equal("3.2.1", application.IpaVersion);
+        Assert.True(application.Enterprise);
+        Assert.Equal("13.0", application.MinimumOsVersion);
+        Assert.Null(application.MinSdkVersion);
+    }
+
+    [Fact]
     public async Task UploadSendsFileHeadersAndImageInjectionPreference()
     {
-        var handler = StubHandler.Json("{\"fileKey\":\"application-key\",\"size_in_bytes\":2048}");
+        var handler = StubHandler.Json(
+            "{\"fileKey\":\"application-key\",\"size_in_bytes\":2048,\"minSdkVersion\":24}");
         using var client = TestClient.Create(handler);
 
         using var first = new MemoryStream(Encoding.UTF8.GetBytes("default"));
@@ -381,6 +406,8 @@ public sealed class ApiTests
 
         Assert.Equal("application-key", application.FileKey);
         Assert.Equal(2048, application.SizeInBytes);
+        Assert.Equal(24, application.MinSdkVersion);
+        Assert.Null(application.BundleId);
     }
 
     [Fact]
