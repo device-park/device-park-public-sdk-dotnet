@@ -342,7 +342,7 @@ handler:
 
 ## Documentation and Support
 
-- [Device Park SDK documentation](https://github.com/device-park/device-park-api-docs)
+- [Device Park SDK documentation](https://docs.testinium.com/devicepark/sdk-documentation)
 - [Source repository](https://github.com/device-park/device-park-public-sdk-dotnet)
 - [Issue tracker](https://github.com/device-park/device-park-public-sdk-dotnet/issues)
 
