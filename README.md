@@ -254,6 +254,10 @@ var application = await client.Applications.UploadAsync(
 
 Use `FileKey` as the stable application identifier. A returned `DownloadUrl` can be temporary or null.
 
+Upload and list responses also carry the metadata read from the artifact. IPA uploads fill
+`BundleId`, `Title`, `IpaVersion`, `Enterprise` and `MinimumOsVersion`, APK uploads fill
+`MinSdkVersion`. Metadata that cannot be read from the artifact stays null.
+
 ## Timestamps
 
 All timestamp properties are exposed as `string?` exactly as the API returns them. Device Park

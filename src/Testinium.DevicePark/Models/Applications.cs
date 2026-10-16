@@ -44,6 +44,24 @@ public sealed class Application
 
     [DataMember(Name = "createdAt")]
     public string? CreatedAt { get; private set; }
+
+    [DataMember(Name = "bundleId")]
+    public string? BundleId { get; private set; }
+
+    [DataMember(Name = "title")]
+    public string? Title { get; private set; }
+
+    [DataMember(Name = "ipaVersion")]
+    public string? IpaVersion { get; private set; }
+
+    [DataMember(Name = "enterprise")]
+    public bool? Enterprise { get; private set; }
+
+    [DataMember(Name = "minimumOsVersion")]
+    public string? MinimumOsVersion { get; private set; }
+
+    [DataMember(Name = "minSdkVersion")]
+    public int? MinSdkVersion { get; private set; }
 }
 
 public sealed class ApplicationPaginationRequest
