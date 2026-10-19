@@ -50,6 +50,33 @@ later, where the OS default (TLS 1.2) applies.
 dotnet add package Testinium.DevicePark
 ```
 
+### Testing an unreleased build
+
+To try a change that is not on nuget.org yet, pack the SDK into a local folder feed and install
+it from there. Nothing is published and the version number never collides with a real release.
+
+In this repository:
+
+```bash
+dotnet pack -c Release -o /tmp/dp-feed -p:Version=1.1.0-local.1
+```
+
+In the project that consumes the SDK:
+
+```bash
+dotnet nuget add source /tmp/dp-feed -n dp-local
+dotnet add package Testinium.DevicePark --version 1.1.0-local.1
+```
+
+Bump the suffix (`-local.2`, `-local.3`, ...) on every new pack — NuGet caches a version once it
+has restored it, so reusing the same version keeps serving the old assembly. To get back to a
+published build, remove the local source and reinstall:
+
+```bash
+dotnet nuget remove source dp-local
+dotnet add package Testinium.DevicePark
+```
+
 ## Authentication
 
 Store credentials in your CI secret store or environment. Do not commit them to source control.
