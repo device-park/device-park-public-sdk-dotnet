@@ -1,0 +1,79 @@
+name: Publish Dev NuGet Package
+
+on:
+  push:
+    branches:
+      - create-pre-release
+  workflow_dispatch: 
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Commit geçmişini almak için önemli
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Generate Dev Version
+        run: |
+          # Örn: csproj içindeki base versiyonu okuyabiliriz veya sabit bir taban alabiliriz.
+          # Burada pratik olması için taban versiyona tarih ve kısa commit hash ekliyoruz.
+          # Örnek çıkan sonuç: 1.0.0-dev.202610301420-a1b2c3d
+          
+          BASE_VERSION="1.0.0" 
+          TIMESTAMP=$(date +'%Y%m%d%H%M')
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          
+          DEV_VERSION="${BASE_VERSION}-dev.${TIMESTAMP}.${COMMIT_HASH}"
+          
+          echo "Dev Version: $DEV_VERSION"
+          echo "DEV_VERSION=$DEV_VERSION" >> "$GITHUB_ENV"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: |
+          dotnet build \
+            -c Release \
+            --no-restore \
+            -p:Version="$DEV_VERSION"
+
+      - name: Test
+        run: |
+          dotnet test \
+            -c Release \
+            --no-build \
+            -p:Version="$DEV_VERSION"
+
+      - name: Pack
+        run: |
+          dotnet pack \
+            -c Release \
+            --no-build \
+            -o artifacts \
+            -p:Version="$DEV_VERSION"
+
+      - name: Login to NuGet.org
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push Dev Package to NuGet.org
+        run: |
+          dotnet nuget push "artifacts/*.nupkg" \
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
