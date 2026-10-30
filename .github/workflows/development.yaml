@@ -10,7 +10,7 @@ permissions:
   contents: read
   id-token: write
 
-  
+
 jobs:
   publish-dev:
     runs-on: ubuntu-latest
@@ -71,6 +71,7 @@ jobs:
         uses: NuGet/login@v1
         with:
           user: ${{ secrets.NUGET_USER }}
+          policy: devicepark-appium-action-dev
 
       - name: Push Dev Package to NuGet.org
         run: |
