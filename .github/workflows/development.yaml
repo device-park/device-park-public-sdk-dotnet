@@ -3,13 +3,12 @@ name: Publish Dev NuGet Package
 on:
   push:
     branches:
-      - dev
+      - create-pre-release
   workflow_dispatch: 
 
 permissions:
   contents: read
   id-token: write
-
 
 jobs:
   publish-dev:
@@ -26,19 +25,31 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Generate Dev Version
+      - name: Generate Smart Auto-Incremented Dev Version
         run: |
-          # Örn: csproj içindeki base versiyonu okuyabiliriz veya sabit bir taban alabiliriz.
-          # Burada pratik olması için taban versiyona tarih ve kısa commit hash ekliyoruz.
-          # Örnek çıkan sonuç: 1.0.0-dev.202610301420-a1b2c3d
+          PACKAGE_NAME="Testinium.DevicePark"
           
-          BASE_VERSION="1.0.0" 
+          # NuGet V3 API'den paketin mevcut son sürümünü çek
+          LATEST_VERSION=$(curl -s "https://api.nuget.org/v3-flatcontainer/$(echo $PACKAGE_NAME | tr '[:upper:]' '[:lower:]')/index.json" | jq -r '.versions[-1]')
+          
+          if [ "$LATEST_VERSION" = "null" ] || [ -z "$LATEST_VERSION" ]; then
+            BASE_VERSION="1.0.0"
+          else
+            # Stable sürümün base kısmını al (örn: 1.1.0-beta -> 1.1.0) ve minör versiyonu 1 artır
+            CLEAN_VERSION=$(echo $LATEST_VERSION | cut -d'-' -f1)
+            MAJOR=$(echo $CLEAN_VERSION | cut -d'.' -f1)
+            MINOR=$(echo $CLEAN_VERSION | cut -d'.' -f2)
+            NEXT_MINOR=$((MINOR + 1))
+            BASE_VERSION="${MAJOR}.${NEXT_MINOR}.0"
+          fi
+
           TIMESTAMP=$(date +'%Y%m%d%H%M')
           COMMIT_HASH=$(git rev-parse --short HEAD)
           
+          # Örnek Çıktı: Canlıda 1.1.0 varsa -> 1.2.0-dev.202610301420-a1b2c3d
           DEV_VERSION="${BASE_VERSION}-dev.${TIMESTAMP}.${COMMIT_HASH}"
           
-          echo "Dev Version: $DEV_VERSION"
+          echo "Generated Auto Dev Version: $DEV_VERSION"
           echo "DEV_VERSION=$DEV_VERSION" >> "$GITHUB_ENV"
 
       - name: Restore
@@ -71,8 +82,6 @@ jobs:
         uses: NuGet/login@v1
         with:
           user: ${{ secrets.NUGET_USER }}
-          
-
 
       - name: Push Dev Package to NuGet.org
         run: |
