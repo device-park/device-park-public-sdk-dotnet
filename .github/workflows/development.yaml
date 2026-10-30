@@ -10,6 +10,7 @@ permissions:
   contents: read
   id-token: write
 
+  
 jobs:
   publish-dev:
     runs-on: ubuntu-latest
