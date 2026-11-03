@@ -3,7 +3,7 @@ name: Publish Dev NuGet Package
 on:
   push:
     branches:
-      - create-pre-release
+      - dev
   workflow_dispatch: 
 
 permissions:
