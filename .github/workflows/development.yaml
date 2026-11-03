@@ -30,7 +30,7 @@ jobs:
           PACKAGE_NAME="Testinium.DevicePark"
           
           # NuGet V3 API'den paketin mevcut son sürümünü çek
-          LATEST_VERSION=$(curl -s "https://api.nuget.org/v3-flatcontainer/$(echo $PACKAGE_NAME | tr '[:upper:]' '[:lower:]')/index.json" | jq -r '.versions[-1]')
+          LATEST_VERSION=$(curl -s "https://api.nuget.org/v3-flatcontainer/$(echo $PACKAGE_NAME | tr '[:upper:]' '[:lower:]')/index.json" | jq -r '[.versions[]? | select(contains("-") | not)] | last')
           
           if [ "$LATEST_VERSION" = "null" ] || [ -z "$LATEST_VERSION" ]; then
             BASE_VERSION="1.0.0"
