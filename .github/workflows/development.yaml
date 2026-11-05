@@ -89,3 +89,10 @@ jobs:
             --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+
+      - name: Unlist Dev Package on NuGet.org
+        run: |
+          dotnet nuget delete "$PACKAGE_NAME" "$DEV_VERSION" \
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --non-interactive
