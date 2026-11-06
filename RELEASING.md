@@ -37,7 +37,9 @@ Use a pre-release tag (`1.5.0-rc.1`, `1.5.0-preview.2`) when the change needs va
 real consumer first. nuget.org hides pre-releases from default search and restore, so they are
 safe to publish ahead of the final version.
 
-Existing tags use the bare form (`1.0.0`, not `v1.0.0`). Keep it consistent.
+Both tag forms work — the workflow strips a leading `v` — and both are in use: `1.0.0` is bare,
+`v1.1.0` is prefixed. Pick one form and stay with it; the published package version is identical
+either way.
 
 ## Cutting a Release
 
