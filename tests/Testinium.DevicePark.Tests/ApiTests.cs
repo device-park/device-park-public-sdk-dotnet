@@ -408,8 +408,23 @@ public sealed class ApiTests
         await Assert.ThrowsAsync<DeviceParkConfigException>(() => client.Sessions.StreamTicketUrlAsync("  "));
         Assert.Empty(handler.Requests);
 
+        // A blank url is a bad service response, not caller misconfiguration.
         await Assert.ThrowsAsync<DeviceParkException>(
             () => client.Sessions.StreamTicketUrlAsync("session-1"));
+        await Assert.ThrowsAsync<DeviceParkException>(
+            () => client.Sessions.StreamUrlAsync("session-1"));
+    }
+
+    [Fact]
+    public async Task StreamUrlReportsAWhitespaceUrlAsAServiceError()
+    {
+        var handler = StubHandler.Json("{\"url\":\"   \"}");
+        using var client = TestClient.Create(handler);
+
+        var error = await Assert.ThrowsAsync<DeviceParkException>(
+            () => client.Sessions.StreamUrlAsync("session-1"));
+
+        Assert.Equal("stream URL is empty", error.Message);
     }
 
     [Fact]

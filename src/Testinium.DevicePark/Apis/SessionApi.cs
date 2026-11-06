@@ -59,6 +59,12 @@ public sealed class SessionApi
             .ConfigureAwait(false);
 
         var streamUrl = JsonMapper.FromJson<StreamUrl>(response);
+
+        if (string.IsNullOrWhiteSpace(streamUrl.Url))
+        {
+            throw new DeviceParkException("stream URL is empty");
+        }
+
         var accessToken = await _httpClient.CurrentAccessTokenAsync(cancellationToken).ConfigureAwait(false);
 
         return StreamUrls.WithAccessToken(streamUrl.Url!, accessToken);
