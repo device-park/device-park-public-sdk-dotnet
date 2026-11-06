@@ -12,7 +12,9 @@
 
   <PropertyGroup>
     <PackageId>Testinium.DevicePark</PackageId>
-    <Version>1.0.0</Version>
+    <!-- Local builds only. Released versions come from the release tag, which the publish
+         workflow passes as -p:Version=. Do not bump this to announce a release. -->
+    <Version>0.0.0-dev</Version>
     <Authors>Device Park Team</Authors>
     <Company>Testinium</Company>
     <Product>Device Park Public SDK</Product>
