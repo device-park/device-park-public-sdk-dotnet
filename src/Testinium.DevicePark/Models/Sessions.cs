@@ -17,7 +17,11 @@ public enum SessionFilter
     ALLOCATION,
     SESSION,
     SERIAL,
-    STATE
+    STATE,
+    USER_EMAIL,
+    USER_ID,
+    COMPANY_ID,
+    COMPANY_NAME
 }
 
 public sealed class DeviceSessionFilterRequest : FilterRequest

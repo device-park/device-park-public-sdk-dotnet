@@ -345,6 +345,29 @@ public sealed class ApiTests
     }
 
     [Fact]
+    public async Task ListSessionsSupportsUserAndCompanyFilters()
+    {
+        var handler = StubHandler.Json(Payloads.EmptyPage);
+        using var client = TestClient.Create(handler);
+
+        await client.Sessions.ListAsync(new DeviceSessionRequest.Builder()
+            .AddFilter(SessionFilter.USER_ID, 42, SearchOperation.EQUAL)
+            .AddFilter(SessionFilter.USER_EMAIL, "qa@example.com", SearchOperation.EQUAL)
+            .AddFilter(SessionFilter.COMPANY_ID, 7, SearchOperation.EQUAL)
+            .AddFilter(SessionFilter.COMPANY_NAME, "Example Company", SearchOperation.EQUAL)
+            .Build());
+
+        var query = HttpUtility.ParseQueryString(handler.ApiRequests[0].Uri.Query);
+
+        Assert.Equal("USER_ID", query["filters[0].key"]);
+        Assert.Equal("42", query["filters[0].value"]);
+        Assert.Equal("USER_EMAIL", query["filters[1].key"]);
+        Assert.Equal("COMPANY_ID", query["filters[2].key"]);
+        Assert.Equal("COMPANY_NAME", query["filters[3].key"]);
+        Assert.Equal("Example Company", query["filters[3].value"]);
+    }
+
+    [Fact]
     public async Task StreamUrlAppendsTheCurrentAccessToken()
     {
         var handler = StubHandler.Json("{\"url\":\"wss://stream.example/stream?session=1\"}");
