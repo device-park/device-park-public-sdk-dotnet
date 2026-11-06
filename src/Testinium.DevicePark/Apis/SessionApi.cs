@@ -47,6 +47,46 @@ public sealed class SessionApi
         return JsonMapper.FromJson<Session>(response);
     }
 
+    // The session-api response carries the stream address without a token; this method appends the
+    // SDK's current access token as the "token" query parameter. The returned URL must not be logged.
+    public async Task<string> StreamUrlAsync(string sessionId, CancellationToken cancellationToken = default)
+    {
+        EnsureSessionId(sessionId);
+
+        var path = SessionPath + "/" + Uri.EscapeDataString(sessionId) + "/stream-url";
+        var response = await _httpClient
+            .GetAsync(path, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        var streamUrl = JsonMapper.FromJson<StreamUrl>(response);
+        var accessToken = await _httpClient.CurrentAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+
+        return StreamUrls.WithAccessToken(streamUrl.Url!, accessToken);
+    }
+
+    // Returns a one-time URL carrying a single-use ticket instead of an access token. Each call
+    // creates a new ticket, so a returned URL must not be reused - including after a failed
+    // connection attempt - and must not be logged. StreamUrlAsync stays available for existing
+    // integrations; new ones should use this method.
+    public async Task<string> StreamTicketUrlAsync(string sessionId, CancellationToken cancellationToken = default)
+    {
+        EnsureSessionId(sessionId);
+
+        var path = SessionPath + "/" + Uri.EscapeDataString(sessionId) + "/stream-ticket";
+        var response = await _httpClient
+            .PostAsync(path, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        var streamUrl = JsonMapper.FromJson<StreamUrl>(response);
+
+        if (string.IsNullOrWhiteSpace(streamUrl.Url))
+        {
+            throw new DeviceParkException("stream ticket URL is empty");
+        }
+
+        return streamUrl.Url!;
+    }
+
     public async Task StopAsync(string sessionId, CancellationToken cancellationToken = default)
     {
         EnsureSessionId(sessionId);
