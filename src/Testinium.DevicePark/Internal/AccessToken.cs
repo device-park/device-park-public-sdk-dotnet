@@ -38,6 +38,8 @@ internal sealed class AccessToken
             response.ExpiresIn,
             issuedAt);
 
+    internal string Value => _value;
+
     internal string AuthorizationHeader => _type + " " + _value;
 
     internal bool IsValid(TimeSpan safetyMargin, DateTimeOffset now) =>

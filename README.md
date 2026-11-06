@@ -15,6 +15,7 @@ The SDK provides typed clients for discovering devices, selecting device pools, 
 - Inspect active and queued allocations.
 - Start multiple sequential sessions from the same active allocation.
 - Stop sessions and collect Appium logs or screen recordings.
+- Resolve a WebSocket URL for watching the device screen of an active session.
 - Upload, list and delete APK or IPA artifacts.
 - Enable image injection for supported application-upload workflows.
 - Authenticate with OAuth2 client credentials and renew access tokens automatically.
@@ -204,7 +205,7 @@ after the final session.
 | `client.Devices` | Discover devices and installed applications | `ListAsync`, `GetAsync`, `AppsAsync`, `ListByDefaultPoolAsync` |
 | `client.Pools` | Discover and manage device pools | `ListAsync`, `GetDefaultPoolAsync`, `ListByDefaultPoolAsync`, `CreateAsync`, `DeleteAsync`, `AddDevicesAsync`, `RemoveDevicesAsync` |
 | `client.Allocations` | Reserve and release devices | `CreateAsync`, `ListAsync`, `DeleteAsync` |
-| `client.Sessions` | Manage test sessions and artifacts | `StartAsync`, `ListAsync`, `StopAsync`, `LogsAsync`, `ScreenRecordsAsync` |
+| `client.Sessions` | Manage test sessions and artifacts | `StartAsync`, `ListAsync`, `StopAsync`, `LogsAsync`, `ScreenRecordsAsync`, `StreamTicketUrlAsync`, `StreamUrlAsync` |
 | `client.Applications` | Manage APK and IPA artifacts | `UploadAsync`, `ListAsync`, `DeleteAsync` |
 
 All service methods are asynchronous and accept an optional `CancellationToken`.
@@ -261,6 +262,21 @@ var request = new DeviceAllocationRequest.Builder()
     .RemoveApps(RemoveAppSelection.REMOVE_WITHOUT_IS_DEFAULT_APPS)
     .Build();
 ```
+
+### Watch the device screen
+
+`StreamTicketUrlAsync` returns a `wss` URL carrying a single-use ticket. Each call mints a new
+ticket, so do not reuse a returned URL — including after a failed connection attempt.
+
+```csharp
+var streamUrl = await client.Sessions.StreamTicketUrlAsync(sessionId);
+```
+
+`StreamUrlAsync` is the older form: it appends the SDK's current access token as the `token` query
+parameter instead of a ticket. It stays available for existing integrations; new ones should use
+`StreamTicketUrlAsync`.
+
+Both URLs carry a credential. Never log them and never place them in a bug report or a screenshot.
 
 ### Upload an application
 

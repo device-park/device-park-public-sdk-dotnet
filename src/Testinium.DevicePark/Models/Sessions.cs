@@ -17,7 +17,11 @@ public enum SessionFilter
     ALLOCATION,
     SESSION,
     SERIAL,
-    STATE
+    STATE,
+    USER_EMAIL,
+    USER_ID,
+    COMPANY_ID,
+    COMPANY_NAME
 }
 
 public sealed class DeviceSessionFilterRequest : FilterRequest
@@ -111,6 +115,17 @@ public sealed class Session
 
     [DataMember(Name = "dataAccessEndDate")]
     public string? DataAccessEndDate { get; private set; }
+
+    [DataMember(Name = "expiresAt")]
+    public string? ExpiresAt { get; private set; }
+}
+
+// Screen-stream WebSocket address returned by session-api, without an access token.
+[DataContract]
+public sealed class StreamUrl
+{
+    [DataMember(Name = "url")]
+    public string? Url { get; private set; }
 }
 
 // DP-PARITY:JAVA-DEAD  Java DeviceStartSessionRequest'te bir sessionId alani ve sessionId(...) builder metodu var;

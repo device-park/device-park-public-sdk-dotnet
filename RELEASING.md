@@ -14,33 +14,75 @@ This repository produces the official `Testinium.DevicePark` package for nuget.o
 | Java artifact | `io.testinium.devicepark:device-park-public-sdk` |
 | npm package | `@device-park/public-sdk` |
 
+## Versioning
+
+**The release tag is the only source of truth for the published version.**
+`.github/workflows/publish.yaml` reads the tag, strips an optional leading `v`, and passes the
+result to build, test and pack as `-p:Version=`.
+
+`<Version>` in `src/Testinium.DevicePark/Testinium.DevicePark.csproj` is deliberately pinned to
+`0.0.0-dev`. It applies to local builds only and is overridden on every release. Bumping it
+publishes nothing and releases nothing — leave it alone.
+
+Versions follow [SemVer](https://semver.org/). Pick the next one from what landed since the
+previous tag (`git log <last-tag>..HEAD --oneline`):
+
+| Change | Bump | Example |
+|---|---|---|
+| Breaking public API change, or a target framework removed | MAJOR | `1.4.2` → `2.0.0` |
+| New public API, backward compatible | MINOR | `1.4.2` → `1.5.0` |
+| Bug fix only, public API unchanged | PATCH | `1.4.2` → `1.4.3` |
+
+Use a pre-release tag (`1.5.0-rc.1`, `1.5.0-preview.2`) when the change needs validation by a
+real consumer first. nuget.org hides pre-releases from default search and restore, so they are
+safe to publish ahead of the final version.
+
+Both tag forms work — the workflow strips a leading `v` — and both are in use: `1.0.0` is bare,
+`v1.1.0` is prefixed. Pick one form and stay with it; the published package version is identical
+either way.
+
+## Cutting a Release
+
+Publishing is triggered by a **published GitHub release**, not by pushing a tag and not by
+running `dotnet nuget push` by hand:
+
+```bash
+git log 1.0.0..HEAD --oneline          # what is going out?
+gh release create 1.1.0 --target dev --title "1.1.0" --generate-notes
+```
+
+The workflow then restores, builds, tests, packs, verifies the package layout, authenticates to
+nuget.org and pushes. `IncludeSymbols` is enabled, so `dotnet pack` also produces a `.snupkg`
+symbol package, pushed alongside the main package by the same glob.
+
+A published version on nuget.org is immutable — it can be unlisted but never replaced. If a
+release is wrong, unlist it and ship a new patch version.
+
 ## Release Requirements
 
-- Build with the **.NET 10 SDK** (current LTS). It compiles all three target frameworks; the
-  .NET 9 SDK also works but is out of support as of May 2026.
-- Update `<Version>` in `src/Testinium.DevicePark/Testinium.DevicePark.csproj`.
-- Never commit NuGet API keys. Supply `NUGET_API_KEY` through the CI secret store.
-- Publish only from a release tag.
+- The workflow pins the **.NET 10 SDK** (current LTS); it compiles all three target frameworks.
+  Match it locally when reproducing a release build.
+- Never commit NuGet credentials. The workflow authenticates through `NuGet/login@v1` with the
+  `NUGET_USER` secret and the job's `id-token: write` permission, so no long-lived API key is
+  stored in the repository.
+- Publish only from a GitHub release. Do not push packages from a developer machine.
 - Keep `netstandard2.0` in the target framework list. Dropping it removes .NET Framework,
-  .NET Core 3.1 and Unity/Xamarin support.
+  .NET Core 3.1 and Unity/Xamarin support — and it is a MAJOR bump.
 - Do not add a `PackageReference` without reconsidering the zero-dependency guarantee. On
   .NET Framework, `System.Text.Json` alone pulls in nine transitive packages.
 
-## Pipeline Commands
+## Reproducing a Release Build Locally
+
+Pass the version explicitly, the same way the pipeline does:
 
 ```bash
 dotnet restore
-dotnet build -c Release
-dotnet test -c Release
-dotnet pack -c Release -o artifacts
-dotnet nuget push "artifacts/*.nupkg" \
-  --source https://api.nuget.org/v3/index.json \
-  --api-key "$NUGET_API_KEY" \
-  --skip-duplicate
+dotnet build -c Release -p:Version=1.1.0
+dotnet test  -c Release -p:Version=1.1.0
+dotnet pack  -c Release -o artifacts -p:Version=1.1.0
 ```
 
-`IncludeSymbols` is enabled, so `dotnet pack` also produces a `.snupkg` symbol package. Push it
-alongside the main package.
+Without `-p:Version`, the package is produced as `0.0.0-dev` from the csproj default.
 
 ## Post-Release Verification
 
