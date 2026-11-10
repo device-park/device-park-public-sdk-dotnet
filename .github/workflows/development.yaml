@@ -1,4 +1,4 @@
-name: Publish Dev NuGet Package
+name: Publish Dev NuGet Package to CodeArtifact
 
 on:
   push:
@@ -14,42 +14,48 @@ jobs:
   publish-dev:
     runs-on: ubuntu-latest
 
+    env:
+      AWS_REGION: eu-west-1
+      AWS_ACCOUNT_ID: "213855680807"
+      DOMAIN_NAME: device-park
+      REPOSITORY_NAME: nuget-store
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Commit geçmişini almak için önemli
+          fetch-depth: 0
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
 
-      - name: Generate Smart Auto-Incremented Dev Version
-        run: |
-          PACKAGE_NAME="Testinium.DevicePark"
-          
-          # NuGet V3 API'den paketin mevcut son sürümünü çek
-          LATEST_VERSION=$(curl -s "https://api.nuget.org/v3-flatcontainer/$(echo $PACKAGE_NAME | tr '[:upper:]' '[:lower:]')/index.json" | jq -r '.versions[-1]')
-          
-          if [ "$LATEST_VERSION" = "null" ] || [ -z "$LATEST_VERSION" ]; then
-            BASE_VERSION="1.0.0"
-          else
-            # Stable sürümün base kısmını al (örn: 1.1.0-beta -> 1.1.0) ve minör versiyonu 1 artır
-            CLEAN_VERSION=$(echo $LATEST_VERSION | cut -d'-' -f1)
-            MAJOR=$(echo $CLEAN_VERSION | cut -d'.' -f1)
-            MINOR=$(echo $CLEAN_VERSION | cut -d'.' -f2)
-            NEXT_MINOR=$((MINOR + 1))
-            BASE_VERSION="${MAJOR}.${NEXT_MINOR}.0"
-          fi
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_DEV_CA_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_DEV_CA_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
+      - name: Login to AWS CodeArtifact (NuGet)
+        run: |
+          aws codeartifact login --tool dotnet \
+            --domain "${{ env.DOMAIN_NAME }}" \
+            --domain-owner "${{ env.AWS_ACCOUNT_ID }}" \
+            --repository "${{ env.REPOSITORY_NAME }}" \
+            --region "${{ env.AWS_REGION }}"
+
+      - name: Generate Dev Version (v1.0.0-dev.tarih.commit)
+        run: |
+          BASE_VERSION="1.0.0"
           TIMESTAMP=$(date +'%Y%m%d%H%M')
           COMMIT_HASH=$(git rev-parse --short HEAD)
           
-          # Örnek Çıktı: Canlıda 1.1.0 varsa -> 1.2.0-dev.202610301420-a1b2c3d
+          # İstediğiniz format: 1.0.0-dev.202611101454-a1b2c3d
           DEV_VERSION="${BASE_VERSION}-dev.${TIMESTAMP}.${COMMIT_HASH}"
           
-          echo "Generated Auto Dev Version: $DEV_VERSION"
+          echo "Generated Dev Version: $DEV_VERSION"
           echo "DEV_VERSION=$DEV_VERSION" >> "$GITHUB_ENV"
 
       - name: Restore
@@ -77,22 +83,8 @@ jobs:
             -o artifacts \
             -p:Version="$DEV_VERSION"
 
-      - name: Login to NuGet.org
-        id: login
-        uses: NuGet/login@v1
-        with:
-          user: ${{ secrets.NUGET_USER }}
-
-      - name: Push Dev Package to NuGet.org
+      - name: Push Dev Package to CodeArtifact
         run: |
           dotnet nuget push "artifacts/*.nupkg" \
-            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
-            --source https://api.nuget.org/v3/index.json \
+            --source "${{ env.REPOSITORY_NAME }}" \
             --skip-duplicate
-
-      - name: Unlist Dev Package on NuGet.org
-        run: |
-          dotnet nuget delete "$PACKAGE_NAME" "$DEV_VERSION" \
-            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
-            --source https://api.nuget.org/v3/index.json \
-            --non-interactive
