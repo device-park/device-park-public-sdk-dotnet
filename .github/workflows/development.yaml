@@ -19,6 +19,7 @@ jobs:
       AWS_ACCOUNT_ID: "213855680807"
       DOMAIN_NAME: device-park
       REPOSITORY_NAME: nuget-store
+      NUGET_FEED_URL: https://device-park-213855680807.d.codeartifact.eu-west-1.amazonaws.com/nuget/nuget-store/v3/index.json
 
     steps:
       - name: Checkout
@@ -38,13 +39,21 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_DEV_CA_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to AWS CodeArtifact (NuGet)
+      - name: Login to AWS CodeArtifact
         run: |
-          aws codeartifact login --tool dotnet \
+          # AWS üzerinden CodeArtifact token'ı alıp runner'daki NuGet'e yetki veriyoruz
+          TOKEN=$(aws codeartifact get-authorization-token \
             --domain "${{ env.DOMAIN_NAME }}" \
             --domain-owner "${{ env.AWS_ACCOUNT_ID }}" \
-            --repository "${{ env.REPOSITORY_NAME }}" \
-            --region "${{ env.AWS_REGION }}"
+            --region "${{ env.AWS_REGION }}" \
+            --query authorizationToken \
+            --output text)
+
+          dotnet nuget add source "${{ env.NUGET_FEED_URL }}" \
+            --name "codeartifact" \
+            --username "aws" \
+            --password "$TOKEN" \
+            --store-password-in-clear-text
 
       - name: Generate Dev Version (v1.0.0-dev.tarih.commit)
         run: |
@@ -52,7 +61,6 @@ jobs:
           TIMESTAMP=$(date +'%Y%m%d%H%M')
           COMMIT_HASH=$(git rev-parse --short HEAD)
           
-          # İstediğiniz format: 1.0.0-dev.202611101454-a1b2c3d
           DEV_VERSION="${BASE_VERSION}-dev.${TIMESTAMP}.${COMMIT_HASH}"
           
           echo "Generated Dev Version: $DEV_VERSION"
@@ -83,8 +91,9 @@ jobs:
             -o artifacts \
             -p:Version="$DEV_VERSION"
 
-      - name: Push Dev Package to CodeArtifact
+      - name: Push Dev Package to AWS CodeArtifact
         run: |
           dotnet nuget push "artifacts/*.nupkg" \
-            --source "${{ env.REPOSITORY_NAME }}" \
+            --source "${{ env.NUGET_FEED_URL }}" \
+            --api-key "aws" \
             --skip-duplicate
