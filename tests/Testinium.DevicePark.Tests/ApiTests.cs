@@ -275,7 +275,8 @@ public sealed class ApiTests
     {
         var handler = StubHandler.Json(
             "{\"sessionId\":\"session-1\",\"allocationId\":\"alloc-1\"," +
-            "\"videoRecording\":true,\"videoRecordingScope\":\"APPIUM_SESSION\",\"endDate\":null}");
+            "\"videoRecording\":true,\"videoRecordingScope\":\"APPIUM_SESSION\",\"endDate\":null," +
+            "\"expiresAt\":\"2026-11-06T12:00:00Z\"}");
 
         using var client = TestClient.Create(handler);
 
@@ -300,6 +301,7 @@ public sealed class ApiTests
 
         Assert.Equal("session-1", session.SessionId);
         Assert.Equal(VideoRecordingScope.APPIUM_SESSION, session.VideoRecordingScope);
+        Assert.Equal("2026-11-06T12:00:00Z", session.ExpiresAt);
         Assert.Null(session.EndDate);
     }
 
@@ -340,6 +342,89 @@ public sealed class ApiTests
             "/session/api/v2/public/sessions/session-1/appium-log",
             handler.ApiRequests[1].Uri.AbsolutePath);
         Assert.Equal("appium log line", Encoding.UTF8.GetString(logs));
+    }
+
+    [Fact]
+    public async Task ListSessionsSupportsUserAndCompanyFilters()
+    {
+        var handler = StubHandler.Json(Payloads.EmptyPage);
+        using var client = TestClient.Create(handler);
+
+        await client.Sessions.ListAsync(new DeviceSessionRequest.Builder()
+            .AddFilter(SessionFilter.USER_ID, 42, SearchOperation.EQUAL)
+            .AddFilter(SessionFilter.USER_EMAIL, "qa@example.com", SearchOperation.EQUAL)
+            .AddFilter(SessionFilter.COMPANY_ID, 7, SearchOperation.EQUAL)
+            .AddFilter(SessionFilter.COMPANY_NAME, "Example Company", SearchOperation.EQUAL)
+            .Build());
+
+        var query = HttpUtility.ParseQueryString(handler.ApiRequests[0].Uri.Query);
+
+        Assert.Equal("USER_ID", query["filters[0].key"]);
+        Assert.Equal("42", query["filters[0].value"]);
+        Assert.Equal("USER_EMAIL", query["filters[1].key"]);
+        Assert.Equal("COMPANY_ID", query["filters[2].key"]);
+        Assert.Equal("COMPANY_NAME", query["filters[3].key"]);
+        Assert.Equal("Example Company", query["filters[3].value"]);
+    }
+
+    [Fact]
+    public async Task StreamUrlAppendsTheCurrentAccessToken()
+    {
+        var handler = StubHandler.Json("{\"url\":\"wss://stream.example/stream?session=1\"}");
+        using var client = TestClient.Create(handler);
+
+        var url = await client.Sessions.StreamUrlAsync("session-1");
+
+        Assert.Equal(HttpMethod.Get, handler.ApiRequests[0].Method);
+        Assert.Equal(
+            "/session/api/v2/public/sessions/session-1/stream-url",
+            handler.ApiRequests[0].Uri.AbsolutePath);
+        Assert.Equal("wss://stream.example/stream?session=1&token=token-1", url);
+    }
+
+    [Fact]
+    public async Task StreamTicketUrlPostsAndReturnsTheUrlUnchanged()
+    {
+        var handler = StubHandler.Json("{\"url\":\"wss://stream.example/stream?ticket=one-time\"}");
+        using var client = TestClient.Create(handler);
+
+        var url = await client.Sessions.StreamTicketUrlAsync("session-1");
+
+        Assert.Equal(HttpMethod.Post, handler.ApiRequests[0].Method);
+        Assert.Equal(
+            "/session/api/v2/public/sessions/session-1/stream-ticket",
+            handler.ApiRequests[0].Uri.AbsolutePath);
+        Assert.Null(handler.ApiRequests[0].Body);
+        Assert.Equal("wss://stream.example/stream?ticket=one-time", url);
+    }
+
+    [Fact]
+    public async Task StreamUrlsRejectEmptySessionIdAndEmptyTicket()
+    {
+        var handler = StubHandler.Json("{\"url\":null}");
+        using var client = TestClient.Create(handler);
+
+        await Assert.ThrowsAsync<DeviceParkConfigException>(() => client.Sessions.StreamUrlAsync("  "));
+        await Assert.ThrowsAsync<DeviceParkConfigException>(() => client.Sessions.StreamTicketUrlAsync("  "));
+        Assert.Empty(handler.Requests);
+
+        // A blank url is a bad service response, not caller misconfiguration.
+        await Assert.ThrowsAsync<DeviceParkException>(
+            () => client.Sessions.StreamTicketUrlAsync("session-1"));
+        await Assert.ThrowsAsync<DeviceParkException>(
+            () => client.Sessions.StreamUrlAsync("session-1"));
+    }
+
+    [Fact]
+    public async Task StreamUrlReportsAWhitespaceUrlAsAServiceError()
+    {
+        var handler = StubHandler.Json("{\"url\":\"   \"}");
+        using var client = TestClient.Create(handler);
+
+        var error = await Assert.ThrowsAsync<DeviceParkException>(
+            () => client.Sessions.StreamUrlAsync("session-1"));
+
+        Assert.Equal("stream URL is empty", error.Message);
     }
 
     [Fact]

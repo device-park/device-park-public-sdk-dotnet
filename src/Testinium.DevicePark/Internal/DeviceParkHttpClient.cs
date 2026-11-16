@@ -111,6 +111,14 @@ internal sealed class DeviceParkHttpClient : IDisposable
         return await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
     }
 
+    // Returns the current OAuth access token, refreshing it when it is missing or near expiry.
+    // Callers that place this value in a URL must not log it.
+    internal async Task<string> CurrentAccessTokenAsync(CancellationToken cancellationToken = default)
+    {
+        var token = await GetValidAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+        return token.Value;
+    }
+
     public void Dispose()
     {
         if (_disposed)
